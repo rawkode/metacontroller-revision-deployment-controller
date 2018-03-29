@@ -1,0 +1,23 @@
+variables:
+  IMAGE_NAME: gcr.io/gt8-mindetic/consumer-deployment-controller
+
+stages:
+  - Build
+  - Deploy
+
+docker-image:
+  stage: Build
+  image: quay.io/rawkode/docker-gcloud:latest
+  script:
+    - docker build -t $IMAGE_NAME:$CI_COMMIT_SHA .
+    - docker push $IMAGE_NAME:$CI_COMMIT_SHA
+
+deploy:
+  stage: Deploy
+  image: rawkode/docker-dind-gcloud:latest
+  only:
+    - master
+  script:
+    - gcloud container clusters get-credentials production --zone europe-west1-b --project gt8-mindetic
+    - kubectl apply -f ./opt/kubernetes
+    - kubectl set image -f ./opt/kubernetes/deployment.yaml controller=$IMAGE_NAME:$CI_COMMIT_SHA

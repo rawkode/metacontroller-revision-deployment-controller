@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consumer-deployment-controller
+  namespace: metacontroller
+spec:
+  selector:
+    app: consumer-deployment-controller
+  ports:
+  - port: 80

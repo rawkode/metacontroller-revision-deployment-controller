@@ -1,0 +1,21 @@
+
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: consumer-deployment-controller
+  namespace: metacontroller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumer-deployment-controller
+  template:
+    metadata:
+      labels:
+        app: consumer-deployment-controller
+    spec:
+      containers:
+      - name: controller
+        image: gcr.io/gt8-mindetic/consumer-deployment-controller:latest
+        imagePullPolicy: Always
