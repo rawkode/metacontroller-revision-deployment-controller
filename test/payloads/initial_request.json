@@ -1,0 +1,14 @@
+{
+  "parent": {
+    "apiVersion": "mindetic.gt8/v1",
+    "kind": "ConsumerDeploymentController",
+    "spec": {
+      "service": "user-service",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "schemaAlias": "primary_schema_alias",
+      "schemaB64": "e30K"
+    }
+  },
+  "children": { "ReplicaSet.extensions/v1beta1": {}, "Service.v1": {} }
+}

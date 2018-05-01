@@ -1,0 +1,11 @@
+version: '2.3'
+
+services:
+  python:
+    build:
+      context: .
+      target: development
+    environment:
+      PYTHONPATH: /app/src
+    volumes:
+      - .:/app

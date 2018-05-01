@@ -1,0 +1,13 @@
+---
+apiVersion: mindetic.gt8/v1
+kind: ConsumerDeploymentController
+metadata:
+  name: test
+  namespace: test
+spec:
+  service: user-service
+  supportSchemas: 3
+  image: nginx:3
+  replicas: 1
+  schemaB64: d30K
+  schemaAlias: primary_schema_alias

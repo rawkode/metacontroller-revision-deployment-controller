@@ -1,0 +1,138 @@
+{
+  "controller": {
+    "metadata": {
+      "name": "consumer-deployment-controller",
+      "selfLink":
+        "/apis/metacontroller.k8s.io/v1alpha1/compositecontrollers/consumer-deployment-controller",
+      "uid": "1cbbfa15-4d1d-11e8-b66d-2caa49e8f9a0",
+      "resourceVersion": "13548",
+      "generation": 1,
+      "creationTimestamp": "2018-05-01T08:53:26Z",
+      "annotations": {
+        "kubectl.kubernetes.io/last-applied-configuration":
+          "{\"apiVersion\":\"metacontroller.k8s.io/v1alpha1\",\"kind\":\"CompositeController\",\"metadata\":{\"annotations\":{},\"name\":\"consumer-deployment-controller\",\"namespace\":\"\"},\"spec\":{\"childResources\":[{\"apiVersion\":\"v1\",\"resource\":\"services\",\"updateStrategy\":{\"method\":\"InPlace\"}},{\"apiVersion\":\"extensions/v1beta1\",\"resource\":\"replicasets\",\"updateStrategy\":{\"method\":\"InPlace\"}}],\"hooks\":{\"sync\":{\"webhook\":{\"url\":\"http://consumer-deployment-controller.metacontroller/watch\"}}},\"parentResource\":{\"apiVersion\":\"mindetic.gt8/v1\",\"resource\":\"consumer-deployment-controllers\"}}}\n"
+      }
+    },
+    "spec": {
+      "parentResource": {
+        "apiVersion": "mindetic.gt8/v1",
+        "resource": "consumer-deployment-controllers"
+      },
+      "childResources": [
+        {
+          "apiVersion": "v1",
+          "resource": "services",
+          "updateStrategy": { "method": "InPlace", "statusChecks": {} }
+        },
+        {
+          "apiVersion": "extensions/v1beta1",
+          "resource": "replicasets",
+          "updateStrategy": { "method": "InPlace", "statusChecks": {} }
+        }
+      ],
+      "hooks": {
+        "sync": {
+          "webhook": {
+            "url": "http://consumer-deployment-controller.metacontroller/watch"
+          }
+        }
+      }
+    },
+    "status": {}
+  },
+  "parent": {
+    "apiVersion": "mindetic.gt8/v1",
+    "kind": "ConsumerDeploymentController",
+    "metadata": {
+      "annotations": {
+        "kubectl.kubernetes.io/last-applied-configuration":
+          "{\"apiVersion\":\"mindetic.gt8/v1\",\"kind\":\"ConsumerDeploymentController\",\"metadata\":{\"annotations\":{},\"name\":\"test\",\"namespace\":\"test\"},\"spec\":{\"image\":\"nginx:latest\",\"replicas\":1,\"schemaAlias\":\"primary_schema_alias\",\"schemaB64\":\"e30K\",\"service\":\"user-service\"}}\n"
+      },
+      "clusterName": "",
+      "creationTimestamp": "2018-05-01T08:53:31Z",
+      "generation": 1,
+      "name": "test",
+      "namespace": "test",
+      "resourceVersion": "13586",
+      "selfLink":
+        "/apis/mindetic.gt8/v1/namespaces/test/consumer-deployment-controllers/test",
+      "uid": "1fad3e72-4d1d-11e8-b66d-2caa49e8f9a0"
+    },
+    "spec": {
+      "image": "nginx:new",
+      "replicas": 1,
+      "schemaAlias": "primary_schema_alias",
+      "schemaB64": "e30K",
+      "service": "user-service"
+    },
+    "status": null
+  },
+  "children": {
+    "ReplicaSet.extensions/v1beta1": {
+      "user-service-consumer-9fkdl": {
+        "apiVersion": "extensions/v1beta1",
+        "kind": "ReplicaSet",
+        "metadata": {
+          "annotations": {
+            "consumer.mindetic.gt8/schemaB64": "e30K",
+            "metacontroller.k8s.io/last-applied-configuration":
+              "{\"apiVersion\":\"apps/v1\",\"kind\":\"ReplicaSet\",\"metadata\":{\"annotations\":{\"consumer.mindetic.gt8/schemaB64\":\"e30K\"},\"generateName\":\"user-service-consumer-\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"component\":\"consumer\",\"service\":\"user-service\"}},\"template\":{\"metadata\":{\"labels\":{\"component\":\"consumer\",\"service\":\"user-service\"}},\"spec\":{\"containers\":[{\"image\":\"nginx:latest\",\"name\":\"consumer\"}]}}}}"
+          },
+          "creationTimestamp": "2018-05-01T08:53:32Z",
+          "generateName": "user-service-consumer-",
+          "generation": 1,
+          "name": "user-service-consumer-9fkdl",
+          "namespace": "test",
+          "ownerReferences": [
+            {
+              "apiVersion": "mindetic.gt8/v1",
+              "blockOwnerDeletion": true,
+              "controller": true,
+              "kind": "ConsumerDeploymentController",
+              "name": "test",
+              "uid": "1fad3e72-4d1d-11e8-b66d-2caa49e8f9a0"
+            }
+          ],
+          "resourceVersion": "13659",
+          "selfLink":
+            "/apis/extensions/v1beta1/namespaces/test/replicasets/user-service-consumer-9fkdl",
+          "uid": "206c1b8e-4d1d-11e8-b66d-2caa49e8f9a0"
+        },
+        "spec": {
+          "replicas": 1,
+          "selector": {
+            "matchLabels": {
+              "component": "consumer",
+              "service": "user-service"
+            }
+          },
+          "template": {
+            "metadata": {
+              "creationTimestamp": null,
+              "labels": { "component": "consumer", "service": "user-service" }
+            },
+            "spec": {
+              "containers": [
+                {
+                  "image": "nginx:latest",
+                  "imagePullPolicy": "Always",
+                  "name": "consumer",
+                  "resources": {},
+                  "terminationMessagePath": "/dev/termination-log",
+                  "terminationMessagePolicy": "File"
+                }
+              ],
+              "dnsPolicy": "ClusterFirst",
+              "restartPolicy": "Always",
+              "schedulerName": "default-scheduler",
+              "securityContext": {},
+              "terminationGracePeriodSeconds": 30
+            }
+          }
+        },
+        "status": { "replicas": 0 }
+      }
+    },
+    "Service.v1": {}
+  }
+}
