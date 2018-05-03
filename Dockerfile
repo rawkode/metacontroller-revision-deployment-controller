@@ -1,21 +1,23 @@
-FROM python:3 AS dependencies
+FROM python:3 AS development
 
-WORKDIR /app
-COPY requirements.txt /app
+RUN pip install pipenv
 
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PIPENV_VENV_IN_PROJECT true
+ENV FLASK_APP watch.py
+ENV PS1 " 🐳 \[\033[1;36m\]\W\[\033[0;35m\] # \[\033[0m\]"
 
-# Image with dependencies, but nothing else added; for development
-FROM dependencies AS development
-
-FROM dependencies AS production
+FROM development
 
 WORKDIR /app
 COPY / /app
 
-ENV FLASK_APP watch.py
+ENV PATH $PATH:/app/.venv/bin
+ENV PYTHONPATH /app/src/
 
-WORKDIR /app/src
+RUN pipenv install
 
-ENTRYPOINT [ "python" ]
+EXPOSE 80
+
+WORKDIR /app/src/
+ENTRYPOINT [ "/app/.venv/bin/python" ]
 CMD [ "-m", "flask", "run", "--host", "0.0.0.0", "--port", "80" ]

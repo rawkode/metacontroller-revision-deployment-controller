@@ -8,7 +8,7 @@ def test_initial_payload():
     __location__ = os.path.realpath(os.path.join(
         os.getcwd(), os.path.dirname(__file__)))
 
-    with open(__location__ + '/payloads/initial_request.json') as test_payload:
+    with open(__location__ + '/../../test/payloads/initial_request.json') as test_payload:
         json_object = json.load(test_payload)
         objects = request_in_to_objects(json_object)
 
@@ -19,7 +19,7 @@ def test_same_schema_payload():
     __location__ = os.path.realpath(os.path.join(
         os.getcwd(), os.path.dirname(__file__)))
 
-    with open(__location__ + '/payloads/schema_exists_different_image.json') as test_payload:
+    with open(__location__ + '/../../test/payloads/schema_exists_different_image.json') as test_payload:
         json_object = json.load(test_payload)
         objects = request_in_to_objects(json_object)
 
@@ -30,12 +30,7 @@ def test_same_schema_payload():
             'annotations': {
                 'consumer.mindetic.gt8/schemaB64': 'e30K'
             },
-            'containers': [
-                {
-                    'name': 'consumer',
-                    'image': 'nginx:latest'
-                }
-            ]
+            'image': 'nginx:latest'
         }]
 
         assert expected_objects == objects

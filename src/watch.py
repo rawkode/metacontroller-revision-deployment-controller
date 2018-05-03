@@ -1,4 +1,4 @@
-from boltons.iterutils import remap
+from consumer_deployment_spec import ConsumerDeploymentSpec
 from flask import Flask, request, jsonify
 from kubernetes.client import ApiClient
 from kubernetes.client.models.v1_container import V1Container
@@ -59,16 +59,21 @@ def handle(payload):
 
     parent_spec = payload['parent']['spec']
 
-    service = parent_spec['service']
-    schemaB64 = parent_spec['schemaB64']
-    image = parent_spec['image']
-    _schema_alias = ''
+    consumer_deployment_spec = ConsumerDeploymentSpec(
+        service=parent_spec['service'],
+        image=parent_spec['image'],
+        schema_b64=parent_spec['schemaB64'],
+        elasticsearch_uri=parent_spec['elasticsearchUri'],
+        schema_alias=parent_spec['schemaAlias'],
+        support_schemas=parent_spec['supportSchemas']
+    )
 
-    replica_set = does_replica_set_exist_for_schema(schemaB64, objects)
+    replica_set = does_replica_set_exist_for_schema(
+        consumer_deployment_spec.schema_b64, objects)
 
     if replica_set is None:
-        print('Creating consumer for ' + service +
-              ' with schemaB64 ' + schemaB64)
+        print('Creating consumer for ' + consumer_deployment_spec.service +
+              ' with schemaB64 ' + consumer_deployment_spec.schema_b64)
         sys.stdout.flush()
 
         for object in objects:
@@ -77,7 +82,7 @@ def handle(payload):
 
         new = [{'type': 'ReplicaSet.extensions/v1beta1'}] + objects
 
-        return objects_to_request_out(service, schemaB64, image, new)
+        return objects_to_request_out(consumer_deployment_spec, new)
 
     for object in objects:
         print('Comparing ' + replica_set + ' with ' + object['name'])
@@ -85,29 +90,29 @@ def handle(payload):
 
         if replica_set == object['name']:
             if 'consumer.mindetic.gt8/active' in object['annotations']:
-                if object['image'] == image:
+                if object['image'] == consumer_deployment_spec.image:
                     # No update
-                    return objects_to_request_out(service, schemaB64, image, objects)
+                    return objects_to_request_out(consumer_deployment_spec, objects)
                 else:
                     print("Potentially updating image from " +
-                          object['image'] + ' to ' + image)
+                          object['image'] + ' to ' + consumer_deployment_spec.image)
                     object['annotations']['consumer.mindetic.gt8/active'] = str(
                         datetime.datetime.now())
-                    object['image'] = image
+                    object['image'] = consumer_deployment_spec.image
 
-                    return objects_to_request_out(service, schemaB64, image, objects)
+                    return objects_to_request_out(consumer_deployment_spec, objects)
 
     # Looks like we're rolling back
     for object in objects:
         if replica_set == object['name']:
-            print("Potentially rolling back to schema " + schemaB64
-                  + ' from image ' + object['image'] + ' to ' + image)
+            print("Potentially rolling back to schema " + consumer_deployment_spec.schema_b64
+                  + ' from image ' + object['image'] + ' to ' + consumer_deployment_spec.image)
             sys.stdout.flush()
             object['annotations']['consumer.mindetic.gt8/active'] = str(
                 datetime.datetime.now())
-            object['image'] = image
+            object['image'] = consumer_deployment_spec.image
         else:
             object['annotations'].pop(
                 'consumer.mindetic.gt8/active', None)
 
-    return objects_to_request_out(service, schemaB64, image, objects)
+    return objects_to_request_out(consumer_deployment_spec, objects)

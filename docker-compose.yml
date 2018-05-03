@@ -5,7 +5,9 @@ services:
     build:
       context: .
       target: development
+    working_dir: ${PWD}
     environment:
-      PYTHONPATH: /app/src
+      PATH: $PATH:${PWD}/.venv/bin
+      PYTHONPATH: ${PWD}/src
     volumes:
-      - .:/app
+      - .:${PWD}

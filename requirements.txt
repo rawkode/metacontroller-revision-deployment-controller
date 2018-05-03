@@ -1,5 +1,0 @@
-boltons
-flask
-kubernetes
-pytest
-uuid

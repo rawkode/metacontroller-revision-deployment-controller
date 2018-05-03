@@ -1,3 +1,4 @@
+from consumer_deployment_spec import ConsumerDeploymentSpec, hash_schema
 from kubernetes.client import ApiClient
 from kubernetes.client.models.v1_container import V1Container
 from kubernetes.client.models.v1_label_selector import V1LabelSelector
@@ -39,15 +40,16 @@ def request_in_to_objects(payload: dict):
     return objects
 
 
-def objects_to_request_out(service: str, schemaB64: str, image: str, objects: list):
+def objects_to_request_out(consumer_deployment_spec: ConsumerDeploymentSpec, objects: list):
     children = []
 
     for object in objects:
         if 'ReplicaSet.extensions/v1beta1' == object['type']:
             if 'name' in object:
-                children.append(object_to_replica_set(service, object))
+                children.append(object_to_replica_set(
+                    consumer_deployment_spec, object))
             else:
-                children.append(new_replica_set(service, schemaB64, image))
+                children.append(new_replica_set(consumer_deployment_spec))
 
     api = ApiClient()
     response = api.sanitize_for_serialization(children)
@@ -55,14 +57,17 @@ def objects_to_request_out(service: str, schemaB64: str, image: str, objects: li
     return {'children': response}
 
 
-def new_replica_set(service, schemaB64, image):
+def new_replica_set(consumer_deployment_spec: ConsumerDeploymentSpec):
+    print(consumer_deployment_spec)
+    sys.stdout.flush()
+
     return V1ReplicaSet(
         api_version='extensions/v1beta1',
         kind='ReplicaSet',
         metadata={
-            'generateName': service + '-',
+            'generateName': consumer_deployment_spec.service + '-',
             'annotations': {
-                'consumer.mindetic.gt8/schemaB64': schemaB64,
+                'consumer.mindetic.gt8/schemaB64': consumer_deployment_spec.schema_b64,
                 'consumer.mindetic.gt8/active': str(datetime.datetime.now())
             }
         },
@@ -70,27 +75,33 @@ def new_replica_set(service, schemaB64, image):
             replicas=1,
             selector=V1LabelSelector(
                 match_labels={
-                    'service': service,
+                    'service': consumer_deployment_spec.service,
                     'component': 'consumer'
                 }),
             template=V1PodTemplateSpec(
                 metadata={
                     'labels': {
-                        'service': service,
+                        'service': consumer_deployment_spec.service,
                         'component': 'consumer'
                     }
                 },
                 spec=V1PodSpec(
                     containers=[
-                        V1Container(name='consumer', image=image)
+                        V1Container(name='consumer',
+                                    image=consumer_deployment_spec.image)
                     ],
                     init_containers=[
                         V1Container(name='schema-creator',
-                                    image='gcr.io/gt8-mindetic/consumer-operator:1.0',
-                                    command=['create-schema'],
+                                    image='gcr.io/gt8-mindetic/consumer-operator:2.0',
+                                    args=['create_schema.py'],
                                     env=[
-                                        {'name': 'SCHEMAB64', 'value': schemaB64}]
-                                    )
+                                        {'name': 'SCHEMA_B64',
+                                            'value': consumer_deployment_spec.schema_b64},
+                                        {'name': 'SCHEMA_HASH',
+                                            'value': consumer_deployment_spec.schema_hash},
+                                        {'name': 'ELASTICSEARCH_URI',
+                                            'value': consumer_deployment_spec.elasticsearch_uri}
+                                    ])
                     ],
                 )
             )
@@ -98,13 +109,16 @@ def new_replica_set(service, schemaB64, image):
     )
 
 
-def object_to_replica_set(service, object: dict):
+def object_to_replica_set(consumer_deployment_spec: ConsumerDeploymentSpec, object: dict):
     annotations = {k: v for k, v in filter(
         lambda t: t[0].startswith('consumer'), object['annotations'].items())}
 
     print('Applying annotations')
     print(annotations)
     sys.stdout.flush()
+
+    schema_hash = hash_schema(
+        object['annotations']['consumer.mindetic.gt8/schemaB64'])
 
     return V1ReplicaSet(
         api_version='extensions/v1beta1',
@@ -117,13 +131,13 @@ def object_to_replica_set(service, object: dict):
             replicas=1,
             selector=V1LabelSelector(
                 match_labels={
-                    'service': service,
+                    'service': consumer_deployment_spec.service,
                     'component': 'consumer'
                 }),
             template=V1PodTemplateSpec(
                 metadata={
                     'labels': {
-                        'service': service,
+                        'service': consumer_deployment_spec.service,
                         'component': 'consumer'
                     }
                 },
@@ -133,11 +147,16 @@ def object_to_replica_set(service, object: dict):
                     ],
                     init_containers=[
                         V1Container(name='schema-creator',
-                                    image='gcr.io/gt8-mindetic/consumer-operator:1.0',
-                                    command=['create-schema'],
+                                    image='gcr.io/gt8-mindetic/consumer-operator:2.0',
+                                    args=['create_schema.py'],
                                     env=[
-                                        {'name': 'SCHEMAB64', 'value': object['annotations']['consumer.mindetic.gt8/schemaB64']}]
-                                    )
+                                        {'name': 'SCHEMA_B64',
+                                            'value': object['annotations']['consumer.mindetic.gt8/schemaB64']},
+                                        {'name': 'SCHEMA_HASH',
+                                            'value': schema_hash},
+                                        {'name': 'ELASTICSEARCH_URI',
+                                            'value': consumer_deployment_spec.elasticsearch_uri},
+                                    ])
                     ],
                 )
             )

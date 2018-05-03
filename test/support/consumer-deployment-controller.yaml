@@ -6,8 +6,8 @@ metadata:
   namespace: test
 spec:
   service: user-service
-  supportSchemas: 3
-  image: nginx:3
-  replicas: 1
+  image: nginx:latest
   schemaB64: d30K
   schemaAlias: primary_schema_alias
+  elasticsearchUri: http://elasticsearch:9200
+  supportSchemas: 3
