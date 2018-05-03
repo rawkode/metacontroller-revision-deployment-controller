@@ -1,9 +1,9 @@
-from consumer_deployment_spec import ConsumerDeploymentSpec
+from cdc import CDCSpec
 from hashlib import sha256
 
 
-def test_spec():
-    cds = ConsumerDeploymentSpec(
+def test_cdc_spec():
+    cds = CDCSpec(
         service='service',
         image='image:latest',
         elasticsearch_uri='http://elasticsearch:9200',

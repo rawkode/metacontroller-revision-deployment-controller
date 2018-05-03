@@ -9,12 +9,15 @@ ENV PS1 " 🐳 \[\033[1;36m\]\W\[\033[0;35m\] # \[\033[0m\]"
 FROM development
 
 WORKDIR /app
-COPY / /app
 
 ENV PATH $PATH:/app/.venv/bin
 ENV PYTHONPATH /app/src/
 
+COPY /Pipfile /app/
+
 RUN pipenv install
+
+COPY / /app
 
 EXPOSE 80
 

@@ -7,7 +7,7 @@ metadata:
 spec:
   service: user-service
   image: nginx:latest
-  schemaB64: d30K
+  schemaB64: p30K
   schemaAlias: primary_schema_alias
   elasticsearchUri: http://elasticsearch:9200
   supportSchemas: 3

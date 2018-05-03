@@ -1,11 +1,7 @@
-from hashlib import sha256
+from cdc.utils.hash import hash_schema
 
 
-def hash_schema(schema: str):
-    return sha256(schema.encode('utf-8')).hexdigest()
-
-
-class ConsumerDeploymentSpec:
+class CDCSpec:
     def __init__(self, service: str, image: str, schema_b64: str, schema_alias: str, elasticsearch_uri: str, support_schemas: int):
         self.service = service
         self.image = image

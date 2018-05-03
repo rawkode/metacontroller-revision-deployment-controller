@@ -1,118 +1,198 @@
-from consumer_deployment_spec import ConsumerDeploymentSpec
+from cdc import CDCSpec
+from cdc.metacontroller import load_children, load_parent, save_children
+from cdc.replica_set import ReplicaSet
 from flask import Flask, request, jsonify
-from kubernetes.client import ApiClient
-from kubernetes.client.models.v1_container import V1Container
-from kubernetes.client.models.v1_label_selector import V1LabelSelector
-from kubernetes.client.models.v1_pod_spec import V1PodSpec
-from kubernetes.client.models.v1_pod_template_spec import V1PodTemplateSpec
-from kubernetes.client.models.v1_replica_set import V1ReplicaSet
-from kubernetes.client.models.v1_replica_set_spec import V1ReplicaSetSpec
-from utils import objects_to_request_out, request_in_to_objects, new_replica_set
-
-
-import copy
-import datetime
-import json
-import logging
-import pprint
-import sys
-import time
-import uuid
+from json import dumps
+from pprint import pprint
+from sys import stdout
+from typing import Iterable, Optional
 
 app = Flask(__name__)
 
 
 @app.route('/watch', methods=['POST'])
 def watch():
-    json_payload = request.get_json()
+    print("New Request", flush=True)
 
-    print("Request")
-    print("Parent")
-    print(json_payload['parent'])
-    print("Children")
-    print(json.dumps(json_payload['children']))
-    sys.stdout.flush()
+    payload = request.get_json()
 
-    print('Response')
-    response = handle(json_payload)
-    print(json.dumps(response))
-    sys.stdout.flush()
+    print('Payload Received:', flush=True)
+    print(payload, flush=True)
 
-    time.sleep(1)
+    parent = load_parent(payload['parent'])
+    children = load_children(payload['children'])
+
+    print('Parent Received:', flush=True)
+    print(parent, flush=True)
+
+    print('Children Received:', flush=True)
+    print(children, flush=True)
+
+    response = process(
+        spec=parent,
+        replica_sets=children['replica_sets']
+    )
+
+    print('Sending Response:', flush=True)
+    print(response, flush=True)
 
     return jsonify(response), 200
 
 
-def does_replica_set_exist_for_schema(schemaB64, objects):
-    for object in objects:
-        if object['annotations']['consumer.mindetic.gt8/schemaB64'] == schemaB64:
-            return object['name']
+def process(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]):
+    active_replica_set = schema_has_replica_set(spec, replica_sets)
+
+    children = []
+
+    if active_replica_set is None:
+        children = launch_new_replica_set(spec, replica_sets)
+
+    if active_replica_set is True:
+        children = update_active_replica_set(spec, replica_sets)
+    else:
+        children = promote_unactive_replica_set(spec, replica_sets)
+
+    # Do we have too many ReplicaSets?
+    if len(children['replica_sets']) > spec.support_schemas:
+        children['replica_sets'] = remove_oldest(children['replica_sets'])
+
+    # Convert to Kubernetes Objects
+    response = save_children(spec, children)
+
+    return response
+
+
+def schema_has_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]) -> Optional[bool]:
+    """
+    Checks if the proposed schema already has a ReplicaSet consuming events.
+
+    Returns True is it is the active ReplicaSet
+    Returns False if it is an unactive ReplicaSet
+    Returns None if no ReplicaSet is consuming for this schema
+    """
+    for replica_set in replica_sets:
+        if replica_set.schema_b64 == spec.schema_b64:
+            if replica_set.active:
+                return True
+
+            return False
+
     return None
 
 
-def handle(payload):
-    objects = request_in_to_objects(payload)
+def schema_is_active_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]) -> bool:
+    for replica_set in replica_sets:
+        if spec.schema_b64 == replica_set.schema_b64 and replica_set.active == True:
+            return True
 
-    print("Loaded Current Objects")
-    print(objects)
-    sys.stdout.flush()
+    return False
 
-    parent_spec = payload['parent']['spec']
 
-    consumer_deployment_spec = ConsumerDeploymentSpec(
-        service=parent_spec['service'],
-        image=parent_spec['image'],
-        schema_b64=parent_spec['schemaB64'],
-        elasticsearch_uri=parent_spec['elasticsearchUri'],
-        schema_alias=parent_spec['schemaAlias'],
-        support_schemas=parent_spec['supportSchemas']
+def remove_oldest(replica_sets: Iterable[ReplicaSet]) -> Iterable[ReplicaSet]:
+    oldest_value = None
+
+    for replica_set in replica_sets:
+        if replica_set.active is False:
+            if oldest_value is None:
+                oldest_value = replica_set
+            elif oldest_value.created > replica_set.created:
+                print('Comparing ' + str(oldest_value.created) +
+                      ' and ' + str(replica_set.created), flush=True)
+                oldest_value = replica_set
+
+    replica_sets.remove(oldest_value)
+
+    return replica_sets
+
+# When we launch a new ReplicaSet, we can ignore any current jobs. These will
+# be removed by the metacontroller because we don't return them. This will stop
+# any current jobs from finishing and changing our alias. We only want the one
+# we're about to return.
+
+
+def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]) -> dict:
+    new_replica_set = ReplicaSet(
+        name=None,
+        created=None,
+        annotations={
+            'consumer.mindetic.gt8/schemaB64': spec.schema_b64
+        },
+        init_containers=[
+            {
+                'name': 'schema-creator',
+                'image': 'gcr.io/gt8-mindetic/consumer-operator:2.0',
+                'imagePullPolicy': 'IfNotPresent',
+                'args': ['create_schema.py'],
+                'env': [
+                    {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
+                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
+                    {'name': 'ELASTICSEARCH_URI', 'value': spec.elasticsearch_uri},
+                ]
+            }
+        ],
+        containers=[
+            {
+                'name': 'consumer',
+                'image': spec.image,
+                'imagePullPolicy': 'IfNotPresent',
+                'env': [
+                    {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
+                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
+                    {'name': 'ELASTICSEARCH_URI', 'value': spec.elasticsearch_uri},
+                ]
+            }
+        ],
+        replicas=1
     )
 
-    replica_set = does_replica_set_exist_for_schema(
-        consumer_deployment_spec.schema_b64, objects)
+    all_replica_sets = replica_sets.append(new_replica_set)
+    new_job = None
+    jobs = [new_job]
 
-    if replica_set is None:
-        print('Creating consumer for ' + consumer_deployment_spec.service +
-              ' with schemaB64 ' + consumer_deployment_spec.schema_b64)
-        sys.stdout.flush()
+    return {'replica_sets': all_replica_sets, 'jobs': jobs}
 
-        for object in objects:
-            object['annotations'].pop(
-                'consumer.mindetic.gt8/active', None)
 
-        new = [{'type': 'ReplicaSet.extensions/v1beta1'}] + objects
+def update_active_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]):
+    # Update schema match with image
+    for replica_set in replica_sets:
+        if spec.schema_b64 == replica_set.schema_b64:
+            replica_set.containers = [
+                {
+                    'name': 'consumer',
+                    'image': spec.image,
+                    'imagePullPolicy': 'IfNotPresent',
+                    'env': [
+                        {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
+                        {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
+                        {'name': 'ELASTICSEARCH_URI',
+                            'value': spec.elasticsearch_uri},
+                    ]
+                }
+            ]
 
-        return objects_to_request_out(consumer_deployment_spec, new)
+    return {'replica_sets': replica_sets, 'jobs': []}
 
-    for object in objects:
-        print('Comparing ' + replica_set + ' with ' + object['name'])
-        sys.stdout.flush()
 
-        if replica_set == object['name']:
-            if 'consumer.mindetic.gt8/active' in object['annotations']:
-                if object['image'] == consumer_deployment_spec.image:
-                    # No update
-                    return objects_to_request_out(consumer_deployment_spec, objects)
-                else:
-                    print("Potentially updating image from " +
-                          object['image'] + ' to ' + consumer_deployment_spec.image)
-                    object['annotations']['consumer.mindetic.gt8/active'] = str(
-                        datetime.datetime.now())
-                    object['image'] = consumer_deployment_spec.image
-
-                    return objects_to_request_out(consumer_deployment_spec, objects)
-
-    # Looks like we're rolling back
-    for object in objects:
-        if replica_set == object['name']:
-            print("Potentially rolling back to schema " + consumer_deployment_spec.schema_b64
-                  + ' from image ' + object['image'] + ' to ' + consumer_deployment_spec.image)
-            sys.stdout.flush()
-            object['annotations']['consumer.mindetic.gt8/active'] = str(
-                datetime.datetime.now())
-            object['image'] = consumer_deployment_spec.image
+def promote_unactive_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]):
+    # If not the replica_set for this schema, set unactive.
+    # Promote if it is
+    for replica_set in replica_sets:
+        if spec.schema_b64 != replica_set.schema_b64:
+            replica_set.set_unactive()
         else:
-            object['annotations'].pop(
-                'consumer.mindetic.gt8/active', None)
+            replica_set.set_active()
+            replica_set.containers = [
+                {
+                    'name': 'consumer',
+                    'image': spec.image,
+                    'imagePullPolicy': 'IfNotPresent',
+                    'env': [
+                        {'name': 'SCHEMA_B64', 'value': replica_set.schema_b64},
+                        {'name': 'SCHEMA_HASH', 'value': replica_set.schema_hash},
+                        {'name': 'ELASTICSEARCH_URI',
+                            'value': spec.elasticsearch_uri},
+                    ]
+                }
+            ]
 
-    return objects_to_request_out(consumer_deployment_spec, objects)
+    return {'replica_sets': replica_sets, 'jobs': []}

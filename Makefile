@@ -19,3 +19,6 @@ dev:
 
 dshell:
 	@docker-compose run --rm --entrypoint=bash python --norc --noprofile
+
+dclean:
+	@docker-compose run --rm --entrypoint=pipenv python --rm

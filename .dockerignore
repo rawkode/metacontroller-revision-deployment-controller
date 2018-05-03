@@ -1,4 +1,11 @@
-.pytest_cache
-.venv
+/.gitlab-ci.yml
+/.pytest_cache
+/.venv
+/.vscode
+/opt
+/tests
+/docker-compose.yml
+/Makefile
+/Pipfile.lock
+
 __pycache__
-test
