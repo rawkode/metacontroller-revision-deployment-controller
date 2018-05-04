@@ -1,5 +1,5 @@
 variables:
-  IMAGE_NAME: gcr.io/gt8-mindetic/consumer-deployment-controller
+  IMAGE_NAME: gcr.io/gt8-mindetic/consumer-tooling/deployment-controller
 
 stages:
   - Build

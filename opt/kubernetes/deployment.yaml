@@ -15,5 +15,5 @@ spec:
     spec:
       containers:
       - name: controller
-        image: gcr.io/gt8-mindetic/consumer-deployment-controller
+        image: gcr.io/gt8-mindetic/consumer-tooling/deployment-controller
         imagePullPolicy: IfNotPresent
