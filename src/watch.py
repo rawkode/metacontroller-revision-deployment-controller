@@ -125,7 +125,7 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jo
             {
                 'name': 'schema-creator',
                 'image': 'gcr.io/gt8-mindetic/consumer-tooling/scripts:2.0',
-                'imagePullPolicy': 'IfNotPresent',
+                'imagePullPolicy': 'Always',
                 'args': ['create_schema.py'],
                 'env': [
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
@@ -162,7 +162,7 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jo
             {
                 'name': 'schema-monitor',
                 'image': 'gcr.io/gt8-mindetic/consumer-tooling/scripts:2.0',
-                'imagePullPolicy': 'IfNotPresent',
+                'imagePullPolicy': 'Always',
                 'args': ['swap_alias.py'],
                 'env': [
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
@@ -241,7 +241,7 @@ def promote_unactive_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSe
             {
                 'name': 'schema-monitor',
                 'image': 'gcr.io/gt8-mindetic/consumer-tooling/scripts:2.0',
-                'imagePullPolicy': 'IfNotPresent',
+                'imagePullPolicy': 'Always',
                 'args': ['swap_alias.py'],
                 'env': [
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
