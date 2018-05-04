@@ -10,9 +10,6 @@ def get_spec():
         image='',
         schema_b64='',
         schema_alias='',
-        kafka_host='',
-        kafka_topic='',
-        elasticsearch_uri='',
         support_schemas=1
     )
 

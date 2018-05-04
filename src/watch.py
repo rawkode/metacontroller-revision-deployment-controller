@@ -129,10 +129,7 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jo
                 'args': ['create_schema.py'],
                 'env': [
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
-                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
-                    {'name': 'ELASTICSEARCH_URI', 'value': spec.elasticsearch_uri},
-                    {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
-                    {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
+                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash}
                 ]
             }
         ],
@@ -143,10 +140,7 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jo
                 'imagePullPolicy': 'IfNotPresent',
                 'env': [
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
-                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
-                    {'name': 'ELASTICSEARCH_URI', 'value': spec.elasticsearch_uri},
-                    {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
-                    {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
+                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash}
                 ]
             }
         ],
@@ -166,10 +160,7 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jo
                 'args': ['swap_alias.py'],
                 'env': [
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
-                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
-                    {'name': 'ELASTICSEARCH_URI', 'value': spec.elasticsearch_uri},
-                    {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
-                    {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
+                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash}
                 ]
             }
         ],
@@ -196,11 +187,7 @@ def update_active_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet],
                     'imagePullPolicy': 'IfNotPresent',
                     'env': [
                         {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
-                        {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
-                        {'name': 'ELASTICSEARCH_URI',
-                            'value': spec.elasticsearch_uri},
-                        {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
-                        {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
+                        {'name': 'SCHEMA_HASH', 'value': spec.schema_hash}
                     ]
                 }
             ]
@@ -225,11 +212,7 @@ def promote_unactive_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSe
                     'imagePullPolicy': 'IfNotPresent',
                     'env': [
                         {'name': 'SCHEMA_B64', 'value': replica_set.schema_b64},
-                        {'name': 'SCHEMA_HASH', 'value': replica_set.schema_hash},
-                        {'name': 'ELASTICSEARCH_URI',
-                            'value': spec.elasticsearch_uri},
-                        {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
-                        {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
+                        {'name': 'SCHEMA_HASH', 'value': replica_set.schema_hash}
                     ]
                 }
             ]
@@ -245,10 +228,7 @@ def promote_unactive_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSe
                 'args': ['swap_alias.py'],
                 'env': [
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
-                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
-                    {'name': 'ELASTICSEARCH_URI', 'value': spec.elasticsearch_uri},
-                    {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
-                    {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
+                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash}
                 ]
             }
         ],

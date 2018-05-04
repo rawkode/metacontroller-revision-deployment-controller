@@ -14,8 +14,5 @@ def test_load_parent():
     assert parent.service == 'user-service'
     assert parent.image == 'nginx:latest'
     assert parent.schema_b64 == 'e30k'
-    assert parent.kafka_host == 'kafka'
-    assert parent.kafka_topic == 'topic'
     assert parent.schema_alias == 'primary_schema_alias'
-    assert parent.elasticsearch_uri == 'http://elasticsearch:9200'
     assert parent.support_schemas == 3

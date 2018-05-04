@@ -15,9 +15,6 @@ def load_parent(payload: dict):
         image=spec['image'],
         schema_b64=spec['schemaB64'],
         schema_alias=spec['schemaAlias'],
-        elasticsearch_uri=spec['elasticsearchUri'],
-        kafka_host=spec['kafkaHost'],
-        kafka_topic=spec['kafkaTopic'],
         support_schemas=int(spec['supportSchemas'])
     )
 
