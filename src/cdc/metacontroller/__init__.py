@@ -218,8 +218,12 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
                     service_account_name='consumer-operator',
                     automount_service_account_token=True,
                     volumes=[
-                        k8s.V1Volume(name='service-vault',
-                                     secret='service-vault')
+                        k8s.V1Volume(
+                            name='service-vault',
+                            secret=k8s.V1SecretVolumeSource(
+                                secret_name='service-vault'
+                            )
+                        )
                     ],
                     affinity=k8s.V1Affinity(
                         pod_anti_affinity=k8s.V1PodAntiAffinity(
