@@ -89,7 +89,10 @@ def save_job(spec: CDCSpec, job: Job):
             command=container.get('command', None),
             args=container.get('args', []),
             env=container['env'],
-            image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent')
+            image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent'),
+            env_from=k8s.V1ConfigMapEnvSource(name='environment-configmap'),
+            security_context=k8s.V1SecurityContext(
+                capabilities=k8s.V1Capabilities(drop=['all']))
         ))
 
     return k8s.V1Job(
@@ -107,7 +110,7 @@ def save_job(spec: CDCSpec, job: Job):
                 spec=k8s.V1PodSpec(
                         containers=containers,
                         restart_policy='OnFailure'
-                    )
+                        )
             ),
         )
     )
@@ -159,7 +162,12 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
             command=container.get('command', None),
             args=container.get('args', []),
             env=container['env'],
-            image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent')
+            image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent'),
+            env_from=k8s.V1ConfigMapEnvSource(name='environment-configmap'),
+            volume_mounts=k8s.V1VolumeMount(
+                name='service-vault', read_only=True, mount_path='/run/secrets/service-vault'),
+            security_context=k8s.V1SecurityContext(
+                capabilities=k8s.V1Capabilities(drop=['all']))
         ))
 
     init_containers = []
@@ -171,7 +179,10 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
             command=container.get('command', None),
             args=container.get('args', []),
             env=container['env'],
-            image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent')
+            image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent'),
+            env_from=k8s.V1ConfigMapEnvSource(name='environment-configmap'),
+            security_context=k8s.V1SecurityContext(
+                capabilities=k8s.V1Capabilities(drop=['all']))
         ))
 
     return k8s.V1ReplicaSet(
@@ -193,6 +204,25 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
                     }
                 },
                 spec=k8s.V1PodSpec(
+                    service_account_name='consumer-operator',
+                    automount_service_account_token=True,
+                    volumes=[
+                        k8s.V1Volume(name='service-vault',
+                                     secret='service-vault')
+                    ],
+                    affinity=k8s.V1Affinity(
+                        pod_anti_affinity=k8s.V1PodAntiAffinity(
+                            required_during_scheduling_ignored_during_execution=k8s.V1PodAffinityTerm(
+                                topology_key='kubernetes.io/hostname',
+                                label_selector=k8s.V1LabelSelector(
+                                    match_labels={
+                                        'service': spec.service,
+                                        'component': 'consumer'
+                                    }
+                                )
+                            )
+                        )
+                    ),
                     containers=containers,
                     init_containers=init_containers
                 )
