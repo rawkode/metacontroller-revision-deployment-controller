@@ -20,3 +20,4 @@ spec:
     sync:
       webhook:
         url: http://consumer-deployment-controller.metacontroller/watch
+  generateSelector: true
