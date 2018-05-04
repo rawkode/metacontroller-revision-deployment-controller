@@ -152,7 +152,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
     }
 
     if replica_set.name is None:
-        metadata['generateName'] = spec.service + '-'
+        metadata['generateName'] = spec.service + '-consumer-'
     else:
         metadata['name'] = replica_set.name
 
