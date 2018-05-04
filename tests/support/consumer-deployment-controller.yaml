@@ -3,11 +3,11 @@ apiVersion: mindetic.gt8/v1
 kind: ConsumerDeploymentController
 metadata:
   name: test
-  namespace: test
+  namespace: default
 spec:
   service: user-service
   image: nginx:latest
-  schemaB64: p30K
+  schemaB64: u40K
   schemaAlias: primary_schema_alias
   elasticsearchUri: http://elasticsearch:9200
   supportSchemas: 3

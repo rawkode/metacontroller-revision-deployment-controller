@@ -1,11 +1,14 @@
 from cdc import CDCSpec
 from cdc.metacontroller import load_children, load_parent, save_children
 from cdc.replica_set import ReplicaSet
+from cdc.job import Job
 from flask import Flask, request, jsonify
 from json import dumps
 from pprint import pprint
 from sys import stdout
 from typing import Iterable, Optional
+import random
+import string
 
 app = Flask(__name__)
 
@@ -30,7 +33,8 @@ def watch():
 
     response = process(
         spec=parent,
-        replica_sets=children['replica_sets']
+        replica_sets=children['replica_sets'],
+        jobs=children['jobs']
     )
 
     print('Sending Response:', flush=True)
@@ -39,18 +43,18 @@ def watch():
     return jsonify(response), 200
 
 
-def process(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]):
+def process(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jobs: Iterable[Job]):
     active_replica_set = schema_has_replica_set(spec, replica_sets)
 
     children = []
 
     if active_replica_set is None:
-        children = launch_new_replica_set(spec, replica_sets)
+        children = launch_new_replica_set(spec, replica_sets, jobs)
 
     if active_replica_set is True:
-        children = update_active_replica_set(spec, replica_sets)
+        children = update_active_replica_set(spec, replica_sets, jobs)
     else:
-        children = promote_unactive_replica_set(spec, replica_sets)
+        children = promote_unactive_replica_set(spec, replica_sets, jobs)
 
     # Do we have too many ReplicaSets?
     if len(children['replica_sets']) > spec.support_schemas:
@@ -96,8 +100,6 @@ def remove_oldest(replica_sets: Iterable[ReplicaSet]) -> Iterable[ReplicaSet]:
             if oldest_value is None:
                 oldest_value = replica_set
             elif oldest_value.created > replica_set.created:
-                print('Comparing ' + str(oldest_value.created) +
-                      ' and ' + str(replica_set.created), flush=True)
                 oldest_value = replica_set
 
     replica_sets.remove(oldest_value)
@@ -110,7 +112,9 @@ def remove_oldest(replica_sets: Iterable[ReplicaSet]) -> Iterable[ReplicaSet]:
 # we're about to return.
 
 
-def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]) -> dict:
+def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jobs: Iterable[Job]) -> dict:
+    print("\n\n\nLAUNCHING NEW\n\n\n", flush=True)
+
     new_replica_set = ReplicaSet(
         name=None,
         created=None,
@@ -127,6 +131,8 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]) ->
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
                     {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
                     {'name': 'ELASTICSEARCH_URI', 'value': spec.elasticsearch_uri},
+                    {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
+                    {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
                 ]
             }
         ],
@@ -139,6 +145,8 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]) ->
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
                     {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
                     {'name': 'ELASTICSEARCH_URI', 'value': spec.elasticsearch_uri},
+                    {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
+                    {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
                 ]
             }
         ],
@@ -146,13 +154,38 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]) ->
     )
 
     all_replica_sets = replica_sets.append(new_replica_set)
-    new_job = None
-    jobs = [new_job]
 
-    return {'replica_sets': all_replica_sets, 'jobs': jobs}
+    new_job = Job(
+        name=spec.service + '-schema-alias-switcher-' +
+        random_generator(size=12),
+        containers=[
+            {
+                'name': 'schema-monitor',
+                'image': 'gcr.io/gt8-mindetic/consumer-operator:2.0',
+                'imagePullPolicy': 'IfNotPresent',
+                'args': ['swap_alias.py'],
+                'env': [
+                    {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
+                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
+                    {'name': 'ELASTICSEARCH_URI', 'value': spec.elasticsearch_uri},
+                    {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
+                    {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
+                ]
+            }
+        ],
+        annotations={
+            'consumer.mindetic.gt8/schemaB64': spec.schema_b64
+        }
+    )
+
+    # Ditch all old jobs and let metacontroller remove them. We only want one
+    # alias switcher running when we launch a new replica set
+    return {'replica_sets': all_replica_sets, 'jobs': [new_job]}
 
 
-def update_active_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]):
+def update_active_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jobs: Iterable[Job]):
+    print("\n\n\nUPDATING ACTIVE\n\n\n", flush=True)
+
     # Update schema match with image
     for replica_set in replica_sets:
         if spec.schema_b64 == replica_set.schema_b64:
@@ -166,14 +199,18 @@ def update_active_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet])
                         {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
                         {'name': 'ELASTICSEARCH_URI',
                             'value': spec.elasticsearch_uri},
+                        {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
+                        {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
                     ]
                 }
             ]
 
-    return {'replica_sets': replica_sets, 'jobs': []}
+    return {'replica_sets': replica_sets, 'jobs': jobs}
 
 
-def promote_unactive_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet]):
+def promote_unactive_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jobs: Iterable[Job]):
+    print("\n\n\nPROMOTING INACTIVE\n\n\n", flush=True)
+
     # If not the replica_set for this schema, set unactive.
     # Promote if it is
     for replica_set in replica_sets:
@@ -191,8 +228,41 @@ def promote_unactive_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSe
                         {'name': 'SCHEMA_HASH', 'value': replica_set.schema_hash},
                         {'name': 'ELASTICSEARCH_URI',
                             'value': spec.elasticsearch_uri},
+                        {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
+                        {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
                     ]
                 }
             ]
 
-    return {'replica_sets': replica_sets, 'jobs': []}
+    new_job = Job(
+        name=spec.service + '-schema-alias-switcher-' +
+        random_generator(size=12),
+        containers=[
+            {
+                'name': 'schema-monitor',
+                'image': 'gcr.io/gt8-mindetic/consumer-operator:2.0',
+                'imagePullPolicy': 'IfNotPresent',
+                'args': ['swap_alias.py'],
+                'env': [
+                    {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
+                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
+                    {'name': 'ELASTICSEARCH_URI', 'value': spec.elasticsearch_uri},
+                    {'name': 'KAFKA_HOST', 'value': spec.kafka_host},
+                    {'name': 'KAFKA_TOPIC', 'value': spec.kafka_topic},
+                ]
+            }
+        ],
+        annotations={
+            'consumer.mindetic.gt8/schemaB64': spec.schema_b64
+        }
+    )
+
+    # Ditch all old jobs and let metacontroller remove them. We only want one
+    # alias switcher running when we switch schema
+    jobs = [new_job]
+
+    return {'replica_sets': replica_sets, 'jobs': jobs}
+
+
+def random_generator(size=6, chars=string.ascii_lowercase + string.digits):
+    return ''.join(random.choice(chars) for x in range(size))

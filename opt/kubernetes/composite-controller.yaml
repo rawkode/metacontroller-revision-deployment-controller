@@ -8,12 +8,12 @@ spec:
     apiVersion: mindetic.gt8/v1
     resource: consumer-deployment-controllers
   childResources:
-  - apiVersion: v1
-    resource: services
-    updateStrategy:
-      method: InPlace
   - apiVersion: extensions/v1beta1
     resource: replicasets
+    updateStrategy:
+      method: InPlace
+  - apiVersion: batch/v1
+    resource: jobs
     updateStrategy:
       method: InPlace
   hooks:

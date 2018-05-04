@@ -43,7 +43,8 @@ def test_save_replica_set():
                             args=['5', '6'],
                             env=[
                                 {'name': 'env', 'value': 'cool'}
-                            ]
+                            ],
+                            image_pull_policy='IfNotPresent'
                         )
                     ],
                     init_containers=[
@@ -54,7 +55,8 @@ def test_save_replica_set():
                             args=['2', '1'],
                             env=[
                                 {'name': 'name', 'value': 'value'}
-                            ]
+                            ],
+                            image_pull_policy='IfNotPresent'
                         )
                     ]
                 )
@@ -100,7 +102,8 @@ def test_save_new_replica_set():
                             args=['5', '6'],
                             env=[
                                 {'name': 'env', 'value': 'cool'}
-                            ]
+                            ],
+                            image_pull_policy='IfNotPresent'
                         )
                     ],
                     init_containers=[
@@ -111,7 +114,8 @@ def test_save_new_replica_set():
                             args=['2', '1'],
                             env=[
                                 {'name': 'name', 'value': 'value'}
-                            ]
+                            ],
+                            image_pull_policy='IfNotPresent'
                         )
                     ]
                 )

@@ -16,6 +16,8 @@ def load_parent(payload: dict):
         schema_b64=spec['schemaB64'],
         schema_alias=spec['schemaAlias'],
         elasticsearch_uri=spec['elasticsearchUri'],
+        kafka_host=spec['kafkaHost'],
+        kafka_topic=spec['kafkaTopic'],
         support_schemas=int(spec['supportSchemas'])
     )
 
@@ -52,11 +54,63 @@ def save_children(spec: CDCSpec, children: dict) -> dict:
 
 
 def load_job(payload: dict):
-    return None
+    if 'metadata' not in payload or 'name' not in payload['metadata']:
+        return None
+
+    name = payload['metadata']['name']
+
+    if 'metadata' not in payload or 'annotations' not in payload['metadata']:
+        print('Losing replicaSet (' + name + '), could not find schema_b64')
+
+    # Load Our Annotations
+    annotations = {k: v for k, v in filter(
+        lambda t: t[0].startswith('consumer.mindetic.gt8'), payload['metadata']['annotations'].items())}
+
+    return Job(
+        name=name,
+        containers=payload['spec']['template']['spec']['containers'],
+        annotations=annotations
+    )
 
 
 def save_job(spec: CDCSpec, job: Job):
-    return None
+    metadata = {
+        'annotations': job.annotations
+    }
+
+    metadata['name'] = job.name
+
+    containers = []
+
+    for container in job.containers:
+        containers.append(k8s.V1Container(
+            name=container['name'],
+            image=container['image'],
+            command=container.get('command', None),
+            args=container.get('args', []),
+            env=container['env'],
+            image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent')
+        ))
+
+    return k8s.V1Job(
+        api_version='batch/v1',
+        kind='Job',
+        metadata=metadata,
+        spec=k8s.V1JobSpec(
+            template=k8s.V1PodTemplateSpec(
+                    metadata={
+                        'labels': {
+                            'service': spec.service,
+                            'component': 'consumer'
+                        }
+                    },
+                spec=k8s.V1PodSpec(
+                        containers=containers,
+                        restart_policy='OnFailure'
+                    )
+            ),
+        )
+    )
 
 
 def load_replica_set(payload: dict):
@@ -105,7 +159,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
             command=container.get('command', None),
             args=container.get('args', []),
             env=container['env'],
-            image_pull_policy=container['imagePullPolicy']
+            image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent')
         ))
 
     init_containers = []
@@ -117,7 +171,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
             command=container.get('command', None),
             args=container.get('args', []),
             env=container['env'],
-            image_pull_policy=container['imagePullPolicy']
+            image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent')
         ))
 
     return k8s.V1ReplicaSet(

@@ -5,6 +5,8 @@
     "service": "user-service",
     "image": "nginx:latest",
     "elasticsearchUri": "http://elasticsearch:9200",
+    "kafkaHost": "kafka",
+    "kafkaTopic": "topic",
     "schemaAlias": "primary_schema_alias",
     "schemaB64": "e30k",
     "supportSchemas": 3
