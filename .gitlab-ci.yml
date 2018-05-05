@@ -2,18 +2,18 @@ variables:
   IMAGE_NAME: gcr.io/gt8-mindetic/consumer-tooling/deployment-controller
 
 stages:
-  - Build
-  - Deploy
+  - build
+  - deploy
 
 docker-image:
-  stage: Build
+  stage: build
   image: quay.io/rawkode/docker-gcloud:latest
   script:
     - docker build -t $IMAGE_NAME:$CI_COMMIT_SHA .
     - docker push $IMAGE_NAME:$CI_COMMIT_SHA
 
 deploy:
-  stage: Deploy
+  stage: deploy
   image: rawkode/docker-dind-gcloud:latest
   only:
     - master

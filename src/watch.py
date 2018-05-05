@@ -211,10 +211,6 @@ def promote_unactive_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSe
                 {'name': 'SCHEMA_HASH', 'value': replica_set.schema_hash}
             ]
 
-            # Inject the extra_env provided via CRD
-            for key, value in spec.extra_env:
-                env.append({'name': key, 'value': value})
-
             replica_set.containers = [
                 {
                     'name': 'consumer',
