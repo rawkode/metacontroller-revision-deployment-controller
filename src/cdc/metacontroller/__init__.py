@@ -15,7 +15,8 @@ def load_parent(payload: dict):
         image=spec['image'],
         schema_b64=spec['schemaB64'],
         schema_alias=spec['schemaAlias'],
-        support_schemas=int(spec['supportSchemas'])
+        support_schemas=int(spec['supportSchemas']),
+        extra_env=spec['extraEnv']
     )
 
 
@@ -110,7 +111,7 @@ def save_job(spec: CDCSpec, job: Job):
                 spec=k8s.V1PodSpec(
                         containers=containers,
                         restart_policy='OnFailure'
-                        )
+                )
             ),
         )
     )

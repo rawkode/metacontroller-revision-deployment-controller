@@ -10,7 +10,8 @@ def get_spec():
         image='',
         schema_b64='',
         schema_alias='',
-        support_schemas=1
+        support_schemas=1,
+        extra_env={}
     )
 
 

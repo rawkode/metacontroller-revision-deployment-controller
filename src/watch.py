@@ -115,6 +115,15 @@ def remove_oldest(replica_sets: Iterable[ReplicaSet]) -> Iterable[ReplicaSet]:
 def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jobs: Iterable[Job]) -> dict:
     print("\n\n\nLAUNCHING NEW\n\n\n", flush=True)
 
+    env = [
+        {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
+        {'name': 'SCHEMA_HASH', 'value': spec.schema_hash}
+    ]
+
+    # Inject the extra_env provided via CRD
+    for key, value in spec.extra_env:
+        env.append({'name': key, 'value': value})
+
     new_replica_set = ReplicaSet(
         name=None,
         created=None,
@@ -127,10 +136,7 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jo
                 'image': 'gcr.io/gt8-mindetic/consumer-tooling/scripts:2.0',
                 'imagePullPolicy': 'Always',
                 'args': ['create_schema.py'],
-                'env': [
-                    {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
-                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash}
-                ]
+                'env': env
             }
         ],
         containers=[
@@ -138,10 +144,7 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jo
                 'name': 'consumer',
                 'image': spec.image,
                 'imagePullPolicy': 'IfNotPresent',
-                'env': [
-                    {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
-                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash}
-                ]
+                'env': env
             }
         ],
         replicas=1
@@ -160,7 +163,8 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jo
                 'args': ['swap_alias.py'],
                 'env': [
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
-                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash}
+                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
+                    {'name': 'ALIAS', 'value': spec.schema_alias}
                 ]
             }
         ],
@@ -205,15 +209,22 @@ def promote_unactive_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSe
             replica_set.set_unactive()
         else:
             replica_set.set_active()
+
+            env = [
+                {'name': 'SCHEMA_B64', 'value': replica_set.schema_b64},
+                {'name': 'SCHEMA_HASH', 'value': replica_set.schema_hash}
+            ]
+
+            # Inject the extra_env provided via CRD
+            for key, value in spec.extra_env:
+                env.append({'name': key, 'value': value})
+
             replica_set.containers = [
                 {
                     'name': 'consumer',
                     'image': spec.image,
                     'imagePullPolicy': 'IfNotPresent',
-                    'env': [
-                        {'name': 'SCHEMA_B64', 'value': replica_set.schema_b64},
-                        {'name': 'SCHEMA_HASH', 'value': replica_set.schema_hash}
-                    ]
+                    'env': env
                 }
             ]
 
@@ -228,7 +239,8 @@ def promote_unactive_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSe
                 'args': ['swap_alias.py'],
                 'env': [
                     {'name': 'SCHEMA_B64', 'value': spec.schema_b64},
-                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash}
+                    {'name': 'SCHEMA_HASH', 'value': spec.schema_hash},
+                    {'name': 'ALIAS', 'value': spec.schema_alias}
                 ]
             }
         ],
