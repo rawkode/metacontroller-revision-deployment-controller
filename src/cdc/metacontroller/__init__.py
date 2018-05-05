@@ -16,7 +16,7 @@ def load_parent(payload: dict):
         schema_b64=spec['schemaB64'],
         schema_alias=spec['schemaAlias'],
         support_schemas=int(spec['supportSchemas']),
-        extra_env=spec['extraEnv']
+        env_config_map=spec['envConfigMap']
     )
 
 
@@ -156,6 +156,15 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
 
     containers = []
 
+    env_from = [
+                k8s.V1EnvFromSource(config_map_ref=k8s.V1ConfigMapEnvSource(
+                    name='environment-configmap'))
+            ]
+
+    if spec.env_config_map is not None:
+        env_from.append(k8s.V1EnvFromSource(config_map_ref=k8s.V1ConfigMapEnvSource(
+                    name=spec.env_config_map)))
+
     for container in replica_set.containers:
         containers.append(k8s.V1Container(
             name=container['name'],
@@ -164,10 +173,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
             args=container.get('args', []),
             env=container['env'],
             image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent'),
-            env_from=[
-                k8s.V1EnvFromSource(config_map_ref=k8s.V1ConfigMapEnvSource(
-                    name='environment-configmap'))
-            ],
+            env_from=env_from,
             volume_mounts=[
                 k8s.V1VolumeMount(name='service-vault', read_only=True,
                                   mount_path='/run/secrets/service-vault')
@@ -186,10 +192,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
             args=container.get('args', []),
             env=container['env'],
             image_pull_policy=container.get('imagePullPolicy', 'IfNotPresent'),
-            env_from=[
-                k8s.V1EnvFromSource(config_map_ref=k8s.V1ConfigMapEnvSource(
-                    name='environment-configmap'))
-            ],
+            env_from=env_from,
             security_context=k8s.V1SecurityContext(
                 capabilities=k8s.V1Capabilities(drop=['all']))
         ))

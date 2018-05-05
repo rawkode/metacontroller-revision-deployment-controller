@@ -10,8 +10,6 @@
     "schemaAlias": "primary_schema_alias",
     "schemaB64": "e30k",
     "supportSchemas": 3,
-    "extraEnv": {
-      "apiUrl": "apiUrl"
-    }
+    "envConfigMap": "my-config-map"
   }
 }

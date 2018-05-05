@@ -9,9 +9,7 @@ def test_cdc_spec():
         schema_b64='e30k',
         schema_alias='myalias',
         support_schemas=4,
-        extra_env={
-            "apiUrl": "apiUrl"
-        }
+        env_config_map='config'
     )
 
     assert cds.schema_hash == sha256('e30k'.encode('utf-8')).hexdigest()
@@ -21,6 +19,4 @@ def test_cdc_spec():
     assert cds.schema_b64 == 'e30k'
     assert cds.schema_alias == 'myalias'
     assert cds.support_schemas == 4
-    assert cds.extra_env == {
-        "apiUrl": "apiUrl"
-    }
+    assert cds.env_config_map == 'config'

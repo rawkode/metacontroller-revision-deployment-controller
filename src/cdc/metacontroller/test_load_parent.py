@@ -16,6 +16,4 @@ def test_load_parent():
     assert parent.schema_b64 == 'e30k'
     assert parent.schema_alias == 'primary_schema_alias'
     assert parent.support_schemas == 3
-    assert parent.extra_env == {
-        "apiUrl": "apiUrl"
-    }
+    assert parent.env_config_map == 'my-config-map'
