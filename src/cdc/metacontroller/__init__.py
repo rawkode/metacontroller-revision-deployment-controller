@@ -73,7 +73,11 @@ def load_job(payload: dict):
 
 def save_job(spec: CDCSpec, job: Job):
     metadata = {
-        'annotations': job.annotations
+        'annotations': job.annotations,
+        'labels': {
+            'service': spec.service,
+            'component': 'consumer'
+        }
     }
 
     metadata['name'] = job.name
@@ -111,7 +115,7 @@ def save_job(spec: CDCSpec, job: Job):
                 spec=k8s.V1PodSpec(
                         containers=containers,
                         restart_policy='OnFailure'
-                )
+                    )
             ),
         )
     )
@@ -146,7 +150,11 @@ def load_replica_set(payload: dict):
 
 def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
     metadata = {
-        'annotations': replica_set.annotations
+        'annotations': replica_set.annotations,
+        'labels': {
+            'service': spec.service,
+            'component': 'consumer'
+        }
     }
 
     if replica_set.name is None:
@@ -157,13 +165,13 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
     containers = []
 
     env_from = [
-                k8s.V1EnvFromSource(config_map_ref=k8s.V1ConfigMapEnvSource(
-                    name='environment-configmap'))
-            ]
+        k8s.V1EnvFromSource(config_map_ref=k8s.V1ConfigMapEnvSource(
+            name='environment-configmap'))
+    ]
 
     if spec.env_config_map is not None:
         env_from.append(k8s.V1EnvFromSource(config_map_ref=k8s.V1ConfigMapEnvSource(
-                    name=spec.env_config_map)))
+            name=spec.env_config_map)))
 
     for container in replica_set.containers:
         containers.append(k8s.V1Container(

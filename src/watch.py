@@ -149,8 +149,7 @@ def launch_new_replica_set(spec: CDCSpec, replica_sets: Iterable[ReplicaSet], jo
     all_replica_sets = replica_sets.append(new_replica_set)
 
     new_job = Job(
-        name=spec.service + '-schema-alias-switcher-' +
-        random_generator(size=12),
+        name=spec.service + '-schema-alias-switcher',
         containers=[
             {
                 'name': 'schema-monitor',
