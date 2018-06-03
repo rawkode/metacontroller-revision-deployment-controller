@@ -6,6 +6,8 @@ stages:
   - deploy
 
 docker-image:
+  only:
+    - master
   stage: build
   image: quay.io/rawkode/docker-gcloud:latest
   script:
