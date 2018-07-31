@@ -211,7 +211,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
             volume_mounts=[
                 k8s.V1VolumeMount(name='service-vault', read_only=True,
                                   mount_path='/run/secrets/service-vault')
-            ].append(secret_mounts),
+            ] + secret_mounts,
             security_context=k8s.V1SecurityContext(
                 capabilities=k8s.V1Capabilities(drop=['all']))
         ))
@@ -259,7 +259,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
                                 secret_name='service-vault'
                             )
                         )
-                    ].append(secret_volumes),
+                    ] + secret_volumes,
                     affinity=k8s.V1Affinity(
                         pod_anti_affinity=k8s.V1PodAntiAffinity(
                             required_during_scheduling_ignored_during_execution=[
