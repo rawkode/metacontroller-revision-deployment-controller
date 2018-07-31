@@ -182,7 +182,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
     secret_volumes = []
 
     if spec.mount_secrets is not None and len(spec.mount_secrets) > 0:
-        for secret in list(spec.mount_secrets.items()):
+        for secret in spec.mount_secrets:
             secret_volumes.append(k8s.V1Volume(
                 name=secret.name,
                 secret=k8s.V1SecretVolumeSource(
