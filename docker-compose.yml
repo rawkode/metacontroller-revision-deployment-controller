@@ -6,6 +6,7 @@ services:
       context: .
       target: development
     working_dir: ${PWD}
+    env_file: .env
     environment:
       PATH: $PATH:${PWD}/.venv/bin
       PYTHONPATH: ${PWD}/src
