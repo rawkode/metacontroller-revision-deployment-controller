@@ -16,7 +16,8 @@ def load_parent(payload: dict):
         schema_b64=spec['schemaB64'],
         schema_alias=spec['schemaAlias'],
         support_schemas=int(spec['supportSchemas']),
-        env_config_map=spec['envConfigMap']
+        env_config_map=spec.get('envConfigMap'),
+        mount_secrets=spec.get('mountSecrets')
     )
 
 
@@ -173,6 +174,24 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
         env_from.append(k8s.V1EnvFromSource(config_map_ref=k8s.V1ConfigMapEnvSource(
             name=spec.env_config_map)))
 
+    secret_mounts = []
+    secret_volumes = []
+
+    if len(spec.mount_secrets) > 0:
+        for secret in list(spec.mount_secrets.items()):
+            secret_volumes.append(k8s.V1Volume(
+                name=secret.name,
+                secret=k8s.V1SecretVolumeSource(
+                    secret_name=secret.name
+                )
+            ))
+
+            secret_mounts.append(k8s.V1VolumeMount(
+                name=secret.name,
+                read_only=True,
+                mount_path=secret.path
+            ))
+
     for container in replica_set.containers:
         containers.append(k8s.V1Container(
             name=container['name'],
@@ -185,7 +204,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
             volume_mounts=[
                 k8s.V1VolumeMount(name='service-vault', read_only=True,
                                   mount_path='/run/secrets/service-vault')
-            ],
+            ].append(secret_mounts),
             security_context=k8s.V1SecurityContext(
                 capabilities=k8s.V1Capabilities(drop=['all']))
         ))
@@ -233,7 +252,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
                                 secret_name='service-vault'
                             )
                         )
-                    ],
+                    ].append(secret_volumes),
                     affinity=k8s.V1Affinity(
                         pod_anti_affinity=k8s.V1PodAntiAffinity(
                             required_during_scheduling_ignored_during_execution=[

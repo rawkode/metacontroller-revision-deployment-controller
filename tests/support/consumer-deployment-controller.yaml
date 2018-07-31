@@ -11,3 +11,6 @@ spec:
   schemaAlias: primary_schema_alias
   elasticsearchUri: http://elasticsearch:9200
   supportSchemas: 3
+  mountSecrets:
+  - name: name
+    path: path

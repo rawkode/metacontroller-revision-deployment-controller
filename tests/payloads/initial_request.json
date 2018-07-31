@@ -7,7 +7,10 @@
       "image": "nginx:latest",
       "replicas": 1,
       "schemaAlias": "primary_schema_alias",
-      "schemaB64": "e30K"
+      "schemaB64": "e30K",
+      "mountSecrets": [
+        { "name": "name", "path": "path"}
+      ]
     }
   },
   "children": { "ReplicaSet.extensions/v1beta1": {}, "Service.v1": {} }

@@ -2,7 +2,7 @@ from cdc.utils.hash import hash_schema
 
 
 class CDCSpec:
-    def __init__(self, service: str, image: str, schema_b64: str, schema_alias: str, support_schemas: int, env_config_map: str = None):
+    def __init__(self, service: str, image: str, schema_b64: str, schema_alias: str, support_schemas: int, env_config_map: str = None, mount_secrets: list = []):
         self.service = service
         self.image = image
         self.schema_b64 = schema_b64
@@ -10,3 +10,4 @@ class CDCSpec:
         self.schema_alias = schema_alias
         self.support_schemas = support_schemas
         self.env_config_map = env_config_map
+        self.mount_secrets = mount_secrets
