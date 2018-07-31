@@ -1,6 +1,7 @@
 from cdc import CDCSpec
 from cdc.job import Job
 from cdc.replica_set import ReplicaSet
+from pprint import pprint
 from sys import stdout
 
 import kubernetes.client as k8s_client
@@ -9,6 +10,9 @@ import kubernetes.client.models as k8s
 
 def load_parent(payload: dict):
     spec = payload['spec']
+
+    print("Spec:")
+    pprint(spec)
 
     return CDCSpec(
         service=spec['service'],
@@ -177,7 +181,7 @@ def save_replica_set(spec: CDCSpec, replica_set: ReplicaSet):
     secret_mounts = []
     secret_volumes = []
 
-    if len(spec.mount_secrets) > 0:
+    if spec.mount_secrets is not None and len(spec.mount_secrets) > 0:
         for secret in list(spec.mount_secrets.items()):
             secret_volumes.append(k8s.V1Volume(
                 name=secret.name,
