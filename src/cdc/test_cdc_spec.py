@@ -10,7 +10,8 @@ def test_cdc_spec():
         schema_alias='myalias',
         support_schemas=4,
         env_config_map='config',
-        mount_secrets=[{'name': 'name', 'path': 'path'}]
+        mount_secrets=[{'name':'name', 'path':'path'}],
+        consumer_tooling_version="2.0"
     )
 
     assert cds.schema_hash == sha256('e30k'.encode('utf-8')).hexdigest()
@@ -24,3 +25,4 @@ def test_cdc_spec():
     assert cds.mount_secrets == [
         {'name': 'name', 'path': 'path'}
     ]
+    assert cds.consumer_tooling_version == "2.0"

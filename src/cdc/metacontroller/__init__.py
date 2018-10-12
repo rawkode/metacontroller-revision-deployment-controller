@@ -21,7 +21,8 @@ def load_parent(payload: dict):
         schema_alias=spec['schemaAlias'],
         support_schemas=int(spec['supportSchemas']),
         env_config_map=spec.get('envConfigMap'),
-        mount_secrets=spec.get('mountSecrets')
+        mount_secrets=spec.get('mountSecrets'),
+        consumer_tooling_version=spec.get('consumerToolingVersion')
     )
 
 
